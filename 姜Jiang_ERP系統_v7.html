@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>姜Jiang ERP 管理系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --navy:#12153a; --navy2:#1a1f4a; --navy3:#222858; --navy4:#2a3168;
+  --blue1:#4a9fd4; --blue2:#6bc5e3; --blue3:#2d7ab8;
+  --blue-glow:rgba(74,159,212,0.12);
+  --text:#f0f4ff; --text2:#a8b8d8; --text3:#5a6a9a;
+  --green:#22d3a5; --amber:#f5c842; --red:#f06070; --orange:#f59132;
+  --border:rgba(74,159,212,0.18); --border2:rgba(74,159,212,0.07);
+  --font:'Noto Sans TC',sans-serif; --mono:'DM Mono',monospace;
+  --sidebar:220px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.5;overflow-x:hidden}
+
+/* ── Sidebar ── */
+.sidebar{position:fixed;top:0;left:0;width:var(--sidebar);height:100vh;background:linear-gradient(180deg,var(--navy2),var(--navy));border-right:1px solid var(--border);z-index:100;display:flex;flex-direction:column;overflow:hidden}
+.sidebar::before{content:'';position:absolute;top:-80px;left:-80px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(74,159,212,0.08),transparent 70%);pointer-events:none}
+.brand{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.brand-name{font-size:17px;font-weight:900;letter-spacing:.04em;background:linear-gradient(135deg,var(--blue2),var(--blue1));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.brand-sub{font-size:9px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-top:3px}
+.brand-live{display:inline-flex;align-items:center;gap:4px;font-size:9px;color:var(--green);margin-top:6px;background:rgba(34,211,165,.08);border:1px solid rgba(34,211,165,.2);padding:2px 8px;border-radius:8px}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.nav-sec{font-size:9px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;padding:14px 18px 5px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;color:var(--text2);font-size:12px;transition:all .15s;border-left:2px solid transparent}
+.nav-item:hover{color:var(--text);background:var(--blue-glow)}
+.nav-item.active{color:var(--blue2);border-left-color:var(--blue1);background:linear-gradient(90deg,rgba(74,159,212,0.12),transparent);font-weight:500}
+.nav-icon{width:14px;height:14px;opacity:.7;flex-shrink:0}
+.nav-item.active .nav-icon{opacity:1}
+.sidebar-footer{margin-top:auto;padding:14px 18px;border-top:1px solid var(--border);font-size:10px;color:var(--text3)}
+
+/* ── Main ── */
+.main{margin-left:var(--sidebar);min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:linear-gradient(90deg,var(--navy2),var(--navy));border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.page-title{font-size:15px;font-weight:700;color:var(--text)}
+.page-sub{font-size:10px;color:var(--text3);margin-top:2px}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.badge{font-size:9px;padding:3px 8px;border-radius:8px;font-weight:500;font-family:var(--mono)}
+.badge-live{background:rgba(34,211,165,.1);border:1px solid rgba(34,211,165,.2);color:var(--green)}
+.badge-warn{background:rgba(245,200,66,.1);border:1px solid rgba(245,200,66,.2);color:var(--amber)}
+.badge-danger{background:rgba(240,96,96,.1);border:1px solid rgba(240,96,96,.2);color:var(--red)}
+.badge-info{background:var(--blue-glow);border:1px solid var(--border);color:var(--blue2)}
+.btn{font-size:11px;padding:6px 14px;border-radius:7px;cursor:pointer;border:1px solid var(--border);background:var(--navy3);color:var(--text2);transition:all .15s;font-family:var(--font)}
+.btn:hover{border-color:var(--blue1);color:var(--blue2)}
+.btn-primary{background:linear-gradient(135deg,var(--blue3),var(--blue1));border-color:var(--blue1);color:#fff;font-weight:500}
+.btn-primary:hover{opacity:.9}
+.content{padding:20px 24px;flex:1}
+
+/* ── Pages ── */
+.page{display:none}
+.page.active{display:block}
+
+/* ── KPI Grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi{background:var(--navy2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden;transition:transform .2s}
+.kpi:hover{transform:translateY(-2px)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0}
+.kpi.k-blue::before{background:linear-gradient(90deg,var(--blue3),var(--blue2))}
+.kpi.k-green::before{background:var(--green)}
+.kpi.k-amber::before{background:var(--amber)}
+.kpi.k-red::before{background:var(--red)}
+.kpi-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+.kpi-val{font-size:20px;font-weight:700;font-family:var(--mono);color:var(--text);letter-spacing:-.02em}
+.kpi-val small{font-size:11px;font-weight:400;color:var(--text3)}
+.kpi-trend{font-size:10px;margin-top:4px;color:var(--text3)}
+.trend-up{color:var(--green)} .trend-dn{color:var(--red)}
+
+/* ── Section ── */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sec-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
+.sec-title::before{content:'';display:block;width:3px;height:14px;border-radius:2px;background:linear-gradient(180deg,var(--blue1),var(--blue3))}
+.btn-group{display:flex;gap:6px}
+
+/* ── Table ── */
+.tbl-wrap{background:var(--navy2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:18px}
+.tbl-toolbar{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.search-box{flex:1;min-width:180px;background:var(--navy3);border:1px solid var(--border);border-radius:7px;padding:6px 12px;color:var(--text);font-size:12px;font-family:var(--font);outline:none}
+.search-box:focus{border-color:var(--blue1)}
+.filter-sel{background:var(--navy3);border:1px solid var(--border);border-radius:7px;padding:6px 10px;color:var(--text2);font-size:11px;font-family:var(--font);outline:none;cursor:pointer}
+.filter-sel:focus{border-color:var(--blue1)}
+table{width:100%;border-collapse:collapse}
+th{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);font-weight:500;background:rgba(74,159,212,.04);white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--text2)}
+th.sort-asc::after{content:' ↑'}
+th.sort-desc::after{content:' ↓'}
+td{padding:9px 14px;border-bottom:1px solid var(--border2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--blue-glow)}
+.tbl-foot{padding:10px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text3)}
+.pager{display:flex;gap:4px}
+.pager-btn{padding:3px 8px;border-radius:5px;border:1px solid var(--border);background:var(--navy3);color:var(--text2);cursor:pointer;font-size:11px;transition:all .15s}
+.pager-btn:hover,.pager-btn.active{border-color:var(--blue1);color:var(--blue2)}
+
+/* ── Chips ── */
+.chip{font-size:9px;padding:2px 7px;border-radius:4px;font-weight:500;display:inline-block}
+.chip-shopee{background:rgba(255,100,50,.1);color:#ff8060;border:1px solid rgba(255,100,50,.15)}
+.chip-momo{background:rgba(220,60,60,.1);color:#f09090;border:1px solid rgba(220,60,60,.15)}
+.chip-web{background:var(--blue-glow);color:var(--blue2);border:1px solid var(--border)}
+.chip-green{background:rgba(34,211,165,.1);color:var(--green);border:1px solid rgba(34,211,165,.15)}
+.chip-amber{background:rgba(245,200,66,.1);color:var(--amber);border:1px solid rgba(245,200,66,.2)}
+.chip-red{background:rgba(240,96,96,.1);color:var(--red);border:1px solid rgba(240,96,96,.15)}
+.chip-gray{background:rgba(255,255,255,.05);color:var(--text3);border:1px solid var(--border2)}
+
+/* ── Bar ── */
+.bar-bg{height:4px;border-radius:2px;background:var(--navy4);width:80px;margin-top:4px}
+.bar-fill{height:4px;border-radius:2px}
+
+/* ── Chart cards ── */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.chart-card{background:var(--navy2);border:1px solid var(--border);border-radius:12px;padding:16px}
+.chart-card.full{grid-column:1/-1}
+.chart-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.chart-title::before{content:'';display:block;width:3px;height:12px;border-radius:2px;background:var(--blue1)}
+canvas{max-height:220px}
+
+/* ── Filter bar (日報表) ── */
+.filter-bar{background:var(--navy2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.filter-bar label{font-size:10px;color:var(--text3);display:flex;flex-direction:column;gap:4px}
+.filter-bar input,.filter-bar select{background:var(--navy3);border:1px solid var(--border);border-radius:7px;padding:6px 10px;color:var(--text);font-size:12px;font-family:var(--font);outline:none}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--blue1)}
+.date-quick{display:flex;gap:4px;flex-wrap:wrap}
+.date-quick-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--navy3);color:var(--text2);cursor:pointer;font-size:10px;transition:all .15s}
+.date-quick-btn:hover,.date-quick-btn.active{border-color:var(--blue1);color:var(--blue2);background:var(--blue-glow)}
+
+/* ── Summary row ── */
+.summary-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.summary-card{background:var(--navy2);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.summary-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.summary-val{font-size:16px;font-weight:700;font-family:var(--mono);color:var(--text)}
+.summary-val small{font-size:10px;color:var(--text3);font-weight:400}
+
+/* ── Empty state ── */
+.empty{text-align:center;padding:48px 24px;color:var(--text3)}
+.empty-icon{font-size:32px;margin-bottom:12px;opacity:.4}
+.empty p{font-size:13px}
+
+/* ── Loading ── */
+.loading{text-align:center;padding:32px;color:var(--text3)}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--blue1);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Tooltip ── */
+.mono{font-family:var(--mono);font-size:12px}
+.text-green{color:var(--green)} .text-red{color:var(--red)} .text-amber{color:var(--amber)} .text-blue{color:var(--blue1)}
+
+/* ── Inventory status ── */
+.inv-bar{height:6px;border-radius:3px;background:var(--navy4);width:80px;overflow:hidden}
+.inv-fill{height:100%;border-radius:3px;transition:width .3s}
+
+/* ── Tabs ── */
+.tab-row{display:flex;border-bottom:1px solid var(--border);background:var(--navy2);padding:0 24px}
+.tab{font-size:11px;padding:10px 14px;cursor:pointer;color:var(--text3);border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:var(--blue2);border-bottom-color:var(--blue1)}
+.tab:hover{color:var(--text2)}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--navy4);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-name">姜Jiang</div>
+    <div class="brand-sub">ERP 管理系統</div>
+    <div class="brand-live"><span class="live-dot"></span>即時同步</div>
+  </div>
+  <div class="nav-sec">主要功能</div>
+  <div class="nav-item active" onclick="showPage('dashboard')">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+    儀表板
+  </div>
+  <div class="nav-item" onclick="showPage('products')">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 6h6M5 9h4"/></svg>
+    商品主檔
+  </div>
+  <div class="nav-item" onclick="showPage('cost')">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+    成本中心
+  </div>
+  <div class="nav-item" onclick="showPage('inventory')">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h12M2 12h8"/></svg>
+    庫存管理
+  </div>
+  <div class="nav-item" onclick="showPage('sales')">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 13L6 8l3 3 5-6"/></svg>
+    銷售分析 & 日報表
+  </div>
+  <div class="sidebar-footer">
+    <div id="last-updated">載入中...</div>
+  </div>
+</aside>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<main class="main">
+
+<!-- ── 儀表板 ── -->
+<div id="page-dashboard" class="page active">
+  <div class="topbar">
+    <div>
+      <div class="page-title">銷售總覽 Dashboard</div>
+      <div class="page-sub" id="dash-sub">載入資料中...</div>
+    </div>
+    <div class="topbar-right">
+      <span class="badge badge-live"><span class="live-dot"></span> 即時同步</span>
+      <button class="btn" onclick="loadAll()">重新整理</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="kpi-grid" id="dash-kpis">
+      <div class="kpi k-blue"><div class="kpi-label">總銷售額</div><div class="kpi-val">—</div><div class="kpi-trend">資料載入中</div></div>
+      <div class="kpi k-green"><div class="kpi-label">真實總利潤</div><div class="kpi-val">—</div><div class="kpi-trend">資料載入中</div></div>
+      <div class="kpi k-amber"><div class="kpi-label">商品數</div><div class="kpi-val">—</div><div class="kpi-trend">資料載入中</div></div>
+      <div class="kpi k-red"><div class="kpi-label">庫存警示</div><div class="kpi-val">—</div><div class="kpi-trend">資料載入中</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">通路業績比較</div>
+        <canvas id="chart-channel"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">品類銷售佔比</div>
+        <canvas id="chart-category"></canvas>
+      </div>
+      <div class="chart-card full">
+        <div class="chart-title">商品迴轉率排行（銷售額 ÷ 庫存成本）</div>
+        <canvas id="chart-turnover"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 商品主檔 ── -->
+<div id="page-products" class="page">
+  <div class="topbar">
+    <div>
+      <div class="page-title">商品主檔 Product Master</div>
+      <div class="page-sub" id="prod-sub">載入中...</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-primary" onclick="exportProducts()">匯出 Excel</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="tbl-wrap">
+      <div class="tbl-toolbar">
+        <input class="search-box" id="prod-search" placeholder="搜尋料號 / 品名 / 品牌..." oninput="renderProducts()">
+        <select class="filter-sel" id="prod-cat" onchange="renderProducts()">
+          <option value="">全部品類</option>
+        </select>
+        <select class="filter-sel" id="prod-brand" onchange="renderProducts()">
+          <option value="">全部品牌</option>
+        </select>
+        <select class="filter-sel" id="prod-status" onchange="renderProducts()">
+          <option value="">全部狀態</option>
+          <option value="上架">上架</option>
+          <option value="下架">下架</option>
+          <option value="預購">預購</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortTable('products','sku')">料號</th>
+              <th onclick="sortTable('products','cat')">品類</th>
+              <th onclick="sortTable('products','brand')">品牌</th>
+              <th onclick="sortTable('products','name')">品名</th>
+              <th onclick="sortTable('products','spec')">規格</th>
+              <th onclick="sortTable('products','cost')" style="text-align:right">成本</th>
+              <th onclick="sortTable('products','mrp')" style="text-align:right">市價</th>
+              <th onclick="sortTable('products','price')" style="text-align:right">最低售價</th>
+              <th onclick="sortTable('products','rate')" style="text-align:center">成本率</th>
+              <th onclick="sortTable('products','stock')" style="text-align:center">庫存</th>
+              <th style="text-align:center">狀態</th>
+            </tr>
+          </thead>
+          <tbody id="prod-tbody">
+            <tr><td colspan="11"><div class="loading"><div class="spinner"></div>載入中...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl-foot">
+        <span id="prod-count">—</span>
+        <div class="pager" id="prod-pager"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 成本中心 ── -->
+<div id="page-cost" class="page">
+  <div class="topbar">
+    <div>
+      <div class="page-title">成本中心 Cost Center</div>
+      <div class="page-sub">預估利潤分析（依最低售價計算）</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-primary" onclick="exportCost()">匯出 Excel</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="tbl-wrap">
+      <div class="tbl-toolbar">
+        <input class="search-box" id="cost-search" placeholder="搜尋料號 / 品名..." oninput="renderCost()">
+        <select class="filter-sel" id="cost-cat" onchange="renderCost()">
+          <option value="">全部品類</option>
+        </select>
+        <select class="filter-sel" id="cost-profit" onchange="renderCost()">
+          <option value="">全部利潤狀況</option>
+          <option value="high">優良（成本率 &lt;45%）</option>
+          <option value="mid">一般（45-55%）</option>
+          <option value="low">注意（&gt;55%）</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortTable('cost','sku')">料號</th>
+              <th onclick="sortTable('cost','name')">品名</th>
+              <th onclick="sortTable('cost','cat')">品類</th>
+              <th onclick="sortTable('cost','cost')" style="text-align:right">成本</th>
+              <th onclick="sortTable('cost','mrp')" style="text-align:right">市價</th>
+              <th onclick="sortTable('cost','price')" style="text-align:right">最低售價</th>
+              <th onclick="sortTable('cost','rate')" style="text-align:center">成本率</th>
+              <th onclick="sortTable('cost','shopee_margin')" style="text-align:right">蝦皮預估利潤</th>
+              <th onclick="sortTable('cost','shopee_rate')" style="text-align:center">蝦皮利潤率</th>
+              <th onclick="sortTable('cost','momo_margin')" style="text-align:right">MOMO預估利潤</th>
+              <th onclick="sortTable('cost','momo_rate')" style="text-align:center">MOMO利潤率</th>
+            </tr>
+          </thead>
+          <tbody id="cost-tbody">
+            <tr><td colspan="11"><div class="loading"><div class="spinner"></div>載入中...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl-foot"><span id="cost-count">—</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 庫存管理 ── -->
+<div id="page-inventory" class="page">
+  <div class="topbar">
+    <div>
+      <div class="page-title">庫存管理 Inventory</div>
+      <div class="page-sub" id="inv-sub">載入中...</div>
+    </div>
+    <div class="topbar-right">
+      <span class="badge badge-danger" id="inv-alert-badge" style="display:none"></span>
+      <button class="btn btn-primary" onclick="exportInventory()">匯出 Excel</button>
+    </div>
+  </div>
+  <div class="tab-row">
+    <div class="tab active" onclick="switchInvTab('all',this)">全部庫存</div>
+    <div class="tab" onclick="switchInvTab('warn',this)">⚠ 庫存警示</div>
+    <div class="tab" onclick="switchInvTab('expiry',this)">⏰ 即期品警示</div>
+  </div>
+  <div class="content">
+    <div class="tbl-wrap">
+      <div class="tbl-toolbar">
+        <input class="search-box" id="inv-search" placeholder="搜尋料號 / 品名..." oninput="renderInventory()">
+        <select class="filter-sel" id="inv-cat" onchange="renderInventory()">
+          <option value="">全部品類</option>
+        </select>
+        <select class="filter-sel" id="inv-status" onchange="renderInventory()">
+          <option value="">全部狀態</option>
+          <option value="缺貨">⚠ 缺貨</option>
+          <option value="警示">🔴 警示</option>
+          <option value="偏低">🟡 偏低</option>
+          <option value="正常">🟢 正常</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortTable('inventory','sku')">料號</th>
+              <th onclick="sortTable('inventory','name')">品名</th>
+              <th onclick="sortTable('inventory','cat')">品類</th>
+              <th onclick="sortTable('inventory','safety')" style="text-align:center">安全庫存</th>
+              <th onclick="sortTable('inventory','stock')" style="text-align:center">期末庫存</th>
+              <th style="text-align:center">庫存狀態</th>
+              <th onclick="sortTable('inventory','days')" style="text-align:center">庫存天數</th>
+              <th onclick="sortTable('inventory','expiry')">效期日期</th>
+              <th onclick="sortTable('inventory','exp_days')" style="text-align:center">剩餘天數</th>
+              <th style="text-align:center">效期狀態</th>
+            </tr>
+          </thead>
+          <tbody id="inv-tbody">
+            <tr><td colspan="10"><div class="loading"><div class="spinner"></div>載入中...</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl-foot"><span id="inv-count">—</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 銷售分析 & 日報表 ── -->
+<div id="page-sales" class="page">
+  <div class="topbar">
+    <div>
+      <div class="page-title">銷售分析 & 日報表</div>
+      <div class="page-sub" id="sales-sub">篩選後即時更新</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-primary" onclick="exportSales()">匯出 Excel</button>
+    </div>
+  </div>
+  <div class="content">
+    <!-- 篩選列 -->
+    <div class="filter-bar">
+      <label>
+        開始日期
+        <input type="date" id="date-start">
+      </label>
+      <label>
+        結束日期
+        <input type="date" id="date-end">
+      </label>
+      <label>
+        通路
+        <select id="sales-channel">
+          <option value="">全部通路</option>
+          <option value="蝦皮">蝦皮</option>
+          <option value="MOMO">MOMO</option>
+          <option value="官網">官網</option>
+          <option value="直播">直播</option>
+          <option value="Yahoo">Yahoo</option>
+          <option value="PChome">PChome</option>
+        </select>
+      </label>
+      <label>
+        快速日期
+        <div class="date-quick">
+          <button class="date-quick-btn" onclick="setDateRange('today',this)">今天</button>
+          <button class="date-quick-btn" onclick="setDateRange('yesterday',this)">昨天</button>
+          <button class="date-quick-btn active" onclick="setDateRange('week',this)">本週</button>
+          <button class="date-quick-btn" onclick="setDateRange('lastweek',this)">上週</button>
+          <button class="date-quick-btn" onclick="setDateRange('month',this)">本月</button>
+          <button class="date-quick-btn" onclick="setDateRange('lastmonth',this)">上月</button>
+          <button class="date-quick-btn" onclick="setDateRange('all',this)">全部</button>
+        </div>
+      </label>
+      <button class="btn btn-primary" onclick="applyFilter()">套用篩選</button>
+    </div>
+
+    <!-- KPI 摘要 -->
+    <div class="summary-row" id="sales-summary">
+      <div class="summary-card"><div class="summary-label">銷售金額</div><div class="summary-val">—</div></div>
+      <div class="summary-card"><div class="summary-label">實收金額</div><div class="summary-val">—</div></div>
+      <div class="summary-card"><div class="summary-label">真實利潤</div><div class="summary-val">—</div></div>
+      <div class="summary-card"><div class="summary-label">訂單筆數</div><div class="summary-val">—</div></div>
+      <div class="summary-card"><div class="summary-label">平均客單價</div><div class="summary-val">—</div></div>
+    </div>
+
+    <!-- 趨勢圖 + 利潤排行 -->
+    <div class="chart-grid">
+      <div class="chart-card full">
+        <div class="chart-title">每日銷售趨勢</div>
+        <canvas id="chart-daily"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">通路業績比較（實收金額）</div>
+        <canvas id="chart-channel2"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">高利潤品項排行（真實利潤率）</div>
+        <canvas id="chart-profit-rank"></canvas>
+      </div>
+    </div>
+
+    <!-- 明細表 -->
+    <div class="sec-head">
+      <div class="sec-title">銷售明細</div>
+      <div class="btn-group">
+        <select class="filter-sel" id="sales-sort">
+          <option value="date">依日期排序</option>
+          <option value="amount_desc">依金額（高→低）</option>
+          <option value="amount_asc">依金額（低→高）</option>
+          <option value="profit_desc">依利潤（高→低）</option>
+          <option value="rate_desc">依利潤率（高→低）</option>
+        </select>
+        <input class="search-box" id="sales-search" placeholder="搜尋品名 / 料號..." style="width:200px" oninput="renderSales()">
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>通路</th>
+              <th>料號</th>
+              <th>品名</th>
+              <th style="text-align:center">數量</th>
+              <th style="text-align:right">單價</th>
+              <th style="text-align:right">銷售金額</th>
+              <th style="text-align:right">實收金額</th>
+              <th style="text-align:right">商品成本</th>
+              <th style="text-align:right">真實利潤</th>
+              <th style="text-align:center">利潤率</th>
+            </tr>
+          </thead>
+          <tbody id="sales-tbody">
+            <tr><td colspan="11"><div class="empty"><div class="empty-icon">📊</div><p>請先設定日期區間後點「套用篩選」</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tbl-foot">
+        <span id="sales-count">—</span>
+        <div class="pager" id="sales-pager"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+
+// ═══════════ 內嵌資料（本機備用，線上會自動更新）═══════════
+const EMBEDDED = {"products": [{"sku": "HLBL001", "cat": "保健", "brand": "Belrose", "sup": "蕾綿", "name": "Belrose蜂膠精華液25ml", "spec": "蜂膠", "cost": 223.0, "mrp": 1350.0, "price": 580.0, "stock": 0, "status": "上架"}, {"sku": "HLBL002", "cat": "保健", "brand": "Belrose", "sup": "蕾綿", "name": "Belrose麥蘆卡蜂膠口腔噴劑25ml", "spec": "蜂膠", "cost": 337.0, "mrp": 990.0, "price": 531.0, "stock": 0, "status": "上架"}, {"sku": "HLHC001", "cat": "保健", "brand": "Healthy Care", "sup": "蕾綿", "name": "Healthy Care液態鈣加維他命D膠囊 60顆", "spec": "液態鈣", "cost": 336.0, "mrp": 1280.0, "price": 531.0, "stock": 0, "status": "上架"}, {"sku": "HLHC002", "cat": "保健", "brand": "Healthy Care", "sup": "蕾綿", "name": "Healthy Care 超級Omega-3 95% 迷你魚油膠囊 60顆/瓶", "spec": "魚油", "cost": 490.0, "mrp": 1590.0, "price": 675.0, "stock": 0, "status": "上架"}, {"sku": "HLFM001", "cat": "保健", "brand": "芙媚琳", "sup": "佰欣", "name": "Formoline芙媚琳 新升級窈窕加強錠L112 48錠/罐 (林姿佑代言、德國大廠、促進新陳代謝)", "spec": "", "cost": 600.0, "mrp": 2680.0, "price": 1399.0, "stock": 0, "status": "上架"}, {"sku": "HLMS001", "cat": "保健", "brand": "美實力", "sup": "佰欣", "name": "好命人蔘 30顆/罐 (1罐)", "spec": "", "cost": 358.0, "mrp": 780.0, "price": 680.0, "stock": 0, "status": "上架"}, {"sku": "HLMS002", "cat": "保健", "brand": "美實力", "sup": "佰欣", "name": "好命人蔘 30顆/罐 (2罐)", "spec": "", "cost": 716.0, "mrp": 2340.0, "price": 1360.0, "stock": 0, "status": "上架"}, {"sku": "HLMS003", "cat": "保健", "brand": "美實力", "sup": "佰欣", "name": "好命人蔘 30顆/罐 (3罐)", "spec": "", "cost": 1048.0, "mrp": 3900.0, "price": 1990.0, "stock": 0, "status": "上架"}, {"sku": "HLMS004", "cat": "保健", "brand": "美實力", "sup": "佰欣", "name": "68胜肽發泡錠(美妍活力、活力應援)  (1罐)", "spec": "", "cost": 264.0, "mrp": 680.0, "price": 499.0, "stock": 0, "status": "上架"}, {"sku": "HLMS005", "cat": "保健", "brand": "美實力", "sup": "佰欣", "name": "68胜肽發泡錠(美妍活力、活力應援)  (2罐)", "spec": "", "cost": 526.0, "mrp": 1360.0, "price": 998.0, "stock": 0, "status": "上架"}, {"sku": "HLMS006", "cat": "保健", "brand": "美實力", "sup": "佰欣", "name": "68胜肽發泡錠(美妍活力、活力應援)  (3罐)", "spec": "", "cost": 785.0, "mrp": 2040.0, "price": 1490.0, "stock": 0, "status": "上架"}, {"sku": "FDHV001", "cat": "食品", "brand": "獵人谷之夢", "sup": "蕾綿", "name": "麥蘆卡蜂蜜潤喉糖 10顆/包", "spec": "", "cost": 35.0, "mrp": 150.0, "price": 130.0, "stock": 0, "status": "上架"}, {"sku": "FDHV002", "cat": "食品", "brand": "獵人谷之夢", "sup": "蕾綿", "name": "麥蘆卡蜂蜜潤喉糖 20顆/包", "spec": "", "cost": 70.0, "mrp": 280.0, "price": 150.0, "stock": 0, "status": "上架"}, {"sku": "FDHV003", "cat": "食品", "brand": "獵人谷之夢", "sup": "蕾綿", "name": "麥蘆卡蜂蜜潤喉糖 30顆/包", "spec": "", "cost": 118.0, "mrp": 390.0, "price": 207.0, "stock": 0, "status": "上架"}, {"sku": "FDHV004", "cat": "食品", "brand": "獵人谷之夢", "sup": "蕾綿", "name": "獵人谷之夢 紅藜麥營養棒", "spec": "120g/包", "cost": 60.0, "mrp": 144.0, "price": 89.0, "stock": 0, "status": "上架"}, {"sku": "FDOL001", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油原切地瓜片50g", "spec": "50g/包", "cost": 57.0, "mrp": 149.0, "price": 109.0, "stock": 0, "status": "上架"}, {"sku": "FDOL002", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油原切地瓜條60g", "spec": "60g/包", "cost": 64.0, "mrp": 149.0, "price": 109.0, "stock": 0, "status": "上架"}, {"sku": "FDOL003", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油原切紫地瓜片50g", "spec": "50g/包", "cost": 56.0, "mrp": 149.0, "price": 109.0, "stock": 0, "status": "上架"}, {"sku": "FDOL004", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油原切南瓜片50g", "spec": "50g/包", "cost": 62.0, "mrp": 149.0, "price": 109.0, "stock": 0, "status": "上架"}, {"sku": "FDOL005", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油原切馬鈴薯片50g", "spec": "50g/包", "cost": 60.0, "mrp": 149.0, "price": 109.0, "stock": 0, "status": "上架"}, {"sku": "FDOL006", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油原切馬鈴薯條60g", "spec": "60g/包", "cost": 63.0, "mrp": 149.0, "price": 109.0, "stock": 0, "status": "上架"}, {"sku": "FDOL007", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油原切胡蘿蔔片50g", "spec": "50g/包", "cost": 70.0, "mrp": 169.0, "price": 129.0, "stock": 0, "status": "上架"}, {"sku": "FDOL008", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油純味敏豆50g", "spec": "50g/包", "cost": 79.0, "mrp": 169.0, "price": 129.0, "stock": 0, "status": "上架"}, {"sku": "FDOL009", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油純味青花椰50g", "spec": "50g/包", "cost": 69.0, "mrp": 169.0, "price": 129.0, "stock": 0, "status": "上架"}, {"sku": "FDOL010", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油原切芋頭條60g", "spec": "60g/包", "cost": 82.0, "mrp": 169.0, "price": 129.0, "stock": 0, "status": "上架"}, {"sku": "FDOL011", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油純味秋葵 50g", "spec": "50g/包", "cost": 80.0, "mrp": 169.0, "price": 129.0, "stock": 0, "status": "上架"}, {"sku": "FDOL012", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油蔓越莓堅果巧仁酥 50g", "spec": "50g/包", "cost": 54.0, "mrp": 129.0, "price": 109.0, "stock": 0, "status": "上架"}, {"sku": "FDOL013", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油綜合堅果堅果巧仁酥 50g", "spec": "50g/包", "cost": 57.0, "mrp": 129.0, "price": 109.0, "stock": 0, "status": "上架"}, {"sku": "FDOL014", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油綜合沙漠鹽海苔巧仁酥 25g", "spec": "25g/包", "cost": 45.0, "mrp": 129.0, "price": 109.0, "stock": 0, "status": "上架"}, {"sku": "FDOL015", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油焦糖爆米花50g", "spec": "50g/包", "cost": 34.0, "mrp": 149.0, "price": 99.0, "stock": 0, "status": "上架"}, {"sku": "FDOL016", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油焦糖玫瑰鹽爆米花50g", "spec": "50g/包", "cost": 34.0, "mrp": 149.0, "price": 99.0, "stock": 0, "status": "上架"}, {"sku": "FDOL017", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "初榨橄欖油可可爆米花50g", "spec": "50g/包", "cost": 36.0, "mrp": 149.0, "price": 99.0, "stock": 0, "status": "上架"}, {"sku": "FDOL018", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "輕享組(豆腐乳*2+袋裝蔬果片*2)", "spec": "禮盒", "cost": 387.0, "mrp": 618.0, "price": 559.0, "stock": 0, "status": "上架"}, {"sku": "FDOL019", "cat": "食品", "brand": "有橄生活", "sup": "朗裕", "name": "豐饗組(豆腐乳*5+罐裝蔬果片*4)", "spec": "禮盒", "cost": 732.0, "mrp": 1288.0, "price": 1159.0, "stock": 0, "status": "上架"}, {"sku": "PHMH001", "cat": "寵-保健", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】強效關節粉(30入)", "spec": "關節粉", "cost": 442.0, "mrp": 0, "price": 580.0, "stock": 0, "status": "上架"}, {"sku": "PHMH002", "cat": "寵-保健", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】腸胃專科益生菌(30入)", "spec": "腸胃益生菌", "cost": 395.0, "mrp": 0, "price": 520.0, "stock": 0, "status": "上架"}, {"sku": "PHMH003", "cat": "寵-保健", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】皮膚專科益生菌(30入)", "spec": "皮膚益生菌", "cost": 419.0, "mrp": 0, "price": 550.0, "stock": 0, "status": "上架"}, {"sku": "PHMH004", "cat": "寵-保健", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】專利化毛粉(30入)", "spec": "化毛益生菌", "cost": 251.0, "mrp": 0, "price": 320.0, "stock": 0, "status": "上架"}, {"sku": "PHMH005", "cat": "寵-保健", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】爆毛專利保健粉(30入)", "spec": "爆毛粉", "cost": 340.0, "mrp": 0, "price": 450.0, "stock": 0, "status": "上架"}, {"sku": "PHMH006", "cat": "寵-保健", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】化毛專科益生菌(30入)", "spec": "化毛益生菌", "cost": 284.0, "mrp": 0, "price": 382.0, "stock": 0, "status": "上架"}, {"sku": "PHMH007", "cat": "寵-保健", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】腎臟專科保健粉(30入)", "spec": "腎臟", "cost": 403.0, "mrp": 690.0, "price": 480.0, "stock": 0, "status": "上架"}, {"sku": "PHMH008", "cat": "寵-保健", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】95%頂級深海魚油(30入)", "spec": "魚油", "cost": 505.0, "mrp": 790.0, "price": 660.0, "stock": 0, "status": "上架"}, {"sku": "PFMH001", "cat": "寵-食品", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】100%原型雞肉塊凍乾零食(40克)", "spec": "雞肉", "cost": 174.0, "mrp": 280.0, "price": 240.0, "stock": 0, "status": "上架"}, {"sku": "PFMH002", "cat": "寵-食品", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】100%原型雞肉丁凍乾零食(40克)", "spec": "雞肉", "cost": 189.0, "mrp": 300.0, "price": 260.0, "stock": 0, "status": "上架"}, {"sku": "PFMH003", "cat": "寵-食品", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】100%原型牛肉塊凍乾零食(40克)", "spec": "牛肉", "cost": 174.0, "mrp": 280.0, "price": 230.0, "stock": 0, "status": "上架"}, {"sku": "PFMH004", "cat": "寵-食品", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】100%原型鮮蝦塊凍乾零食(30克)", "spec": "鮮蝦", "cost": 174.0, "mrp": 280.0, "price": 240.0, "stock": 0, "status": "上架"}, {"sku": "PFMH005", "cat": "寵-食品", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】100%原型鮮蝦丁凍乾零食(30克)", "spec": "鮮蝦", "cost": 189.0, "mrp": 300.0, "price": 260.0, "stock": 0, "status": "上架"}, {"sku": "PFMH006", "cat": "寵-食品", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】100%原型鮭魚塊凍乾零食(40克)", "spec": "鮭魚", "cost": 174.0, "mrp": 280.0, "price": 240.0, "stock": 0, "status": "上架"}, {"sku": "PFMH007", "cat": "寵-食品", "brand": "毛孩時代", "sup": "騰勢", "name": "【毛孩時代】100%原型鮭魚丁凍乾零食(40克)", "spec": "鮭魚", "cost": 189.0, "mrp": 300.0, "price": 260.0, "stock": 0, "status": "上架"}, {"sku": "PLJJ001", "cat": "寵-清潔", "brand": "姜Jiang", "sup": "CN", "name": "宠物洁牙指套清洁牙齿狗狗刷牙洁齿牙刷除口臭气猫咪口腔洗牙湿巾", "spec": "50入/罐", "cost": 34.0, "mrp": 150.0, "price": 79.0, "stock": 0, "status": "上架"}, {"sku": "PLJJ002", "cat": "寵-清潔", "brand": "姜Jiang", "sup": "CN", "name": "寵物乾洗/免水洗手套 (6片/包)", "spec": "6入/包", "cost": 28.0, "mrp": 90.0, "price": 59.0, "stock": 0, "status": "上架"}, {"sku": "PFZX001", "cat": "寵-食品", "brand": "蒸鮮之味", "sup": "毛寶", "name": "蒸鮮之味犬用餐盒 (100g/盒)", "spec": "雞/牛/羊\n犬用", "cost": 20.0, "mrp": 55.0, "price": 25.0, "stock": 0, "status": "上架"}, {"sku": "PFZX002", "cat": "寵-食品", "brand": "蒸鮮之味", "sup": "毛寶", "name": "蒸鮮之味犬用罐頭 (400g/罐)", "spec": "雞/牛/羊\n犬用", "cost": 32.0, "mrp": 85.0, "price": 36.0, "stock": 0, "status": "上架"}, {"sku": "PFPV001", "cat": "寵-食品", "brand": "沛樂芙", "sup": "毛寶", "name": "沛樂芙無穀鮮肉罐頭 (約170g/罐)", "spec": "雞/牛\n犬用", "cost": 24.0, "mrp": 65.0, "price": 29.0, "stock": 0, "status": "上架"}, {"sku": "PFPV002", "cat": "寵-食品", "brand": "沛樂芙", "sup": "毛寶", "name": "沛樂芙滋補營養土雞 (約165g/罐)", "spec": "心血管保健(土雞肉+南瓜)/\n關節保健(土雞肉+起司)\n犬用", "cost": 35.0, "mrp": 95.0, "price": 40.0, "stock": 0, "status": "上架"}, {"sku": "PFHR001", "cat": "寵-食品", "brand": "呼嚕貓", "sup": "毛寶", "name": "呼嚕貓無膠機能主食(約85g/罐)", "spec": "心血管保健(白身鮪魚)/\n泌尿道保健(鮮嫩雞肉)\n貓用", "cost": 24.0, "mrp": 80.0, "price": 33.0, "stock": 0, "status": "上架"}, {"sku": "PFHR002", "cat": "寵-食品", "brand": "呼嚕貓", "sup": "毛寶", "name": "呼嚕貓無膠機能副食 (約85g/罐)", "spec": "骨質保健(白身鮪魚+雞肉+吻仔魚)/\n心血管保健(白身鮪魚+雞肉+蟹肉)\n貓用", "cost": 24.0, "mrp": 60.0, "price": 0, "stock": 0, "status": "上架"}, {"sku": "PFPV003", "cat": "寵-食品", "brand": "沛樂芙", "sup": "毛寶", "name": "沛樂芙強效潔牙骨 (約700g/桶)", "spec": "葉綠素/牛肉/起司/牛奶\n4cm/8cm\n犬用", "cost": 251.0, "mrp": 730.0, "price": 295.0, "stock": 0, "status": "上架"}, {"sku": "PFPV004", "cat": "寵-食品", "brand": "沛樂芙", "sup": "毛寶", "name": "沛樂芙潔牙棒棒糖 (約20g)", "spec": "鱈魚雞肉/牛肉\n犬用", "cost": 16.0, "mrp": 49.0, "price": 20.0, "stock": 0, "status": "上架"}, {"sku": "PFPV005", "cat": "寵-食品", "brand": "沛樂芙", "sup": "毛寶", "name": "鮮烘新鮮手做零食", "spec": "1.雞胸肉片約70g/2.雞胸肉切條約70g/\n3.牛板筋捲雞肉約70g/4.脆迪酥約70g/\n5.雞胗約70g/6.蘋果牛肉條約80g/\n7.起司雞肉圓餅約80g/8.鮭魚雞肉條約80g/\n9.藜麥雞肉甜甜圈約80g/\n10.亞麻籽雞肉丁約80g/11.骰子牛約80g/\n12.燕麥雞肉厚片約80g\n犬用", "cost": 62.0, "mrp": 199.0, "price": 80.0, "stock": 0, "status": "上架"}, {"sku": "PFPV006", "cat": "寵-食品", "brand": "沛樂芙", "sup": "毛寶", "name": "嚼嚼肉乾 (約10g)", "spec": "雞肉/雞肉起司\n犬用", "cost": 5.0, "mrp": 1000.0, "price": 400.0, "stock": 0, "status": "上架"}, {"sku": "PFPV007", "cat": "寵-食品", "brand": "沛樂芙", "sup": "毛寶", "name": "沛樂芙寵物潔牙錠 (約120g)", "spec": "鮪魚/鰹魚/起司\n貓用", "cost": 117.0, "mrp": 399.0, "price": 170.0, "stock": 0, "status": "上架"}, {"sku": "PHCY001", "cat": "寵-保健", "brand": "寵研專科", "sup": "毛寶", "name": "寵研專科貓用每日營養補給排毛粉盒裝 (約2g/包-30包/盒)", "spec": "排毛粉", "cost": 169.0, "mrp": 500.0, "price": 250.0, "stock": 0, "status": "上架"}, {"sku": "PFCA001", "cat": "寵-食品", "brand": "CIAO", "sup": "毛寶", "name": "CIAO貓肉泥", "spec": "貓用", "cost": 34.0, "mrp": 59.0, "price": 39.0, "stock": 0, "status": "上架"}, {"sku": "HMJJ001", "cat": "居家", "brand": "姜Jiang", "sup": "CN", "name": "透明玻璃瓶200ml油壺", "spec": "200ml", "cost": 27.0, "mrp": 69.0, "price": 58.0, "stock": 0, "status": "上架"}, {"sku": "HLDS001", "cat": "保健", "brand": "大島生醫", "sup": "騰勢", "name": "【大島生醫】超力精膠囊(30粒/袋)", "spec": "瑪卡", "cost": 305.0, "mrp": 800.0, "price": 480.0, "stock": 0, "status": "上架"}, {"sku": "HLDS002", "cat": "保健", "brand": "大島生醫", "sup": "騰勢", "name": "【大島生醫】挪威高濃度魚油軟膠囊 (60粒/袋)", "spec": "魚油", "cost": 332.0, "mrp": 880.0, "price": 580.0, "stock": 0, "status": "上架"}, {"sku": "HLDS003", "cat": "保健", "brand": "大島生醫", "sup": "騰勢", "name": "【大島生醫】極效蔓越莓益生菌膠囊(30粒/袋)", "spec": "蔓越莓", "cost": 292.0, "mrp": 800.0, "price": 480.0, "stock": 0, "status": "上架"}, {"sku": "HLDS004", "cat": "保健", "brand": "大島生醫", "sup": "騰勢", "name": "大島生醫 淨排酵素膠囊(30顆/袋)", "spec": "淨排酵素", "cost": 292.0, "mrp": 800.0, "price": 480.0, "stock": 0, "status": "上架"}, {"sku": "FDOX001", "cat": "食品", "brand": "Oleolux", "sup": "朗裕", "name": "Oleolux 1000ml", "spec": "1000ml", "cost": 487.0, "mrp": 1580.0, "price": 850.0, "stock": 0, "status": "上架"}, {"sku": "FDGE001", "cat": "食品", "brand": "黃金雙耳", "sup": "朗裕", "name": "黃金雙耳 1000ml", "spec": "1000ml", "cost": 691.0, "mrp": 2580.0, "price": 1200.0, "stock": 0, "status": "上架"}, {"sku": "FDLU001", "cat": "食品", "brand": "露酪", "sup": "朗裕", "name": "松露橄欖油豆腐乳30g", "spec": "30g/塊", "cost": 63.0, "mrp": 149.0, "price": 119.0, "stock": 0, "status": "上架"}, {"sku": "FDLU002", "cat": "食品", "brand": "露酪", "sup": "朗裕", "name": "辣椒橄欖油豆腐乳30g", "spec": "30g/塊", "cost": 63.0, "mrp": 149.0, "price": 119.0, "stock": 0, "status": "上架"}, {"sku": "FDLU003", "cat": "食品", "brand": "露酪", "sup": "朗裕", "name": "蒜香奧勒岡橄欖油豆腐乳30g", "spec": "30g/塊", "cost": 63.0, "mrp": 149.0, "price": 119.0, "stock": 0, "status": "上架"}, {"sku": "FDLU004", "cat": "食品", "brand": "露酪", "sup": "朗裕", "name": "茶韻橄欖油豆腐乳30g", "spec": "30g/塊", "cost": 63.0, "mrp": 149.0, "price": 119.0, "stock": 0, "status": "上架"}, {"sku": "FDLU005", "cat": "食品", "brand": "露酪", "sup": "朗裕", "name": "青檸橄欖油豆腐乳30g", "spec": "30g/塊", "cost": 63.0, "mrp": 149.0, "price": 119.0, "stock": 0, "status": "上架"}, {"sku": "FDJJ001", "cat": "食品", "brand": "姜Jiang", "sup": "大咖", "name": "初榨橄欖油綜合蔬菜原切 顏究鮮蔬-晶亮顏究(馬鈴薯片、紫地瓜片、胡蘿蔔片)", "spec": "60g/包", "cost": 68.0, "mrp": 159.0, "price": 129.0, "stock": 0, "status": "上架"}, {"sku": "FDJJ002", "cat": "食品", "brand": "姜Jiang", "sup": "大咖", "name": "初榨橄欖油綜合蔬菜原切 顏究鮮蔬-纖維順暢(秋葵、敏豆、馬鈴薯條)", "spec": "60g/包", "cost": 81.0, "mrp": 159.0, "price": 129.0, "stock": 0, "status": "上架"}, {"sku": "FDJJ003", "cat": "食品", "brand": "姜Jiang", "sup": "大咖", "name": "初榨橄欖油綜合蔬菜原切 顏究鮮蔬-黃金甜蜜(地瓜片、地瓜條、南瓜片)", "spec": "60g/包", "cost": 66.0, "mrp": 159.0, "price": 129.0, "stock": 0, "status": "上架"}, {"sku": "FDOO001", "cat": "食品", "brand": "原原本本", "sup": "創潔", "name": "原原本本-100%檸檬原汁隨手包10ml", "spec": "10入/袋", "cost": 66.0, "mrp": 119.0, "price": 99.0, "stock": 0, "status": "上架"}], "inventory": [], "sales": []};
+
+// ═══════════════ DATA ═══════════════
+const SHEET_ID = '1BBF5rIn_1gTuKWWol51oL7A97XNJwE-GYxVLW_PjZeM';
+const GID = {
+  products: '1152845976',
+  sales:    '106369624',
+  inventory:'1379385469',
+};
+// 用 gviz API 支援 CORS
+const CSV = {
+  products: `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID.products}`,
+  sales:    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID.sales}`,
+  inventory:`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID.inventory}`,
+};
+
+// 通路抽成設定
+const FEE = { '蝦皮':0.05, 'MOMO':0.06, '官網':0, '直播':0, 'Yahoo':0.05, 'PChome':0.05 };
+
+let DATA = { products:[], sales:[], inventory:[] };
+let FILTERED = { products:[], sales:[], inventory:[] };
+let SORT = { products:{key:'',dir:1}, cost:{key:'',dir:1}, inventory:{key:'',dir:1} };
+let PAGE = { products:1, sales:1 };
+const PER = 50;
+let INV_TAB = 'all';
+let charts = {};
+
+// ═══════════════ UTILS ═══════════════
+const fmt = n => n == null || n === '' || isNaN(n) ? '—' : Number(n).toLocaleString('zh-TW');
+const fmtPct = n => n == null || n === '' || isNaN(n) ? '—' : (Number(n)*100).toFixed(1)+'%';
+const fmtDate = s => s ? String(s).slice(0,10) : '—';
+const num = v => parseFloat(String(v).replace(/,/g,'')) || 0;
+
+function parseLine(line) {
+  const vals = []; let cur = ''; let inQ = false;
+  for (let ch of line) {
+    if (ch === '"') { inQ = !inQ; }
+    else if (ch === ',' && !inQ) { vals.push(cur.replace(/^"|"$/g,'').trim()); cur = ''; }
+    else cur += ch;
+  }
+  vals.push(cur.replace(/^"|"$/g,'').trim());
+  return vals;
+}
+
+function parseCSV(text) {
+  // 統一換行符
+  const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim().split('\n');
+  if (lines.length < 2) return [];
+
+  // 找標題列：第一個有多個非空欄位的列
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(5, lines.length); i++) {
+    const vals = parseLine(lines[i]);
+    const nonEmpty = vals.filter(v => v && v.length > 0);
+    if (nonEmpty.length >= 3) { headerIdx = i; break; }
+  }
+
+  const headers = parseLine(lines[headerIdx]).map(h =>
+    h.trim().replace(/\n/g,' ').replace(/\s+/g,' ')
+  );
+
+  const result = [];
+  for (let i = headerIdx+1; i < lines.length; i++) {
+    const vals = parseLine(lines[i]);
+    if (!vals.some(v => v)) continue; // 跳過空列
+    const obj = {};
+    headers.forEach((h, j) => { if (h) obj[h] = vals[j] || ''; });
+    result.push(obj);
+  }
+  return result;
+}
+
+// 用 JSONP 方式載入 Google Sheets（支援 file:// 本機開啟）
+function fetchSheetJSON(sheetId, gid) {
+  return new Promise((resolve) => {
+    const cbName = 'cb_' + gid + '_' + Date.now();
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&gid=${gid}&callback=${cbName}`;
+    window[cbName] = function(data) {
+      delete window[cbName];
+      document.getElementById('script-'+gid)?.remove();
+      try {
+        const rows = data.table.rows;
+        const cols = data.table.cols.map(c => c.label);
+        // 找真正的標題列（非空欄位多的那列）
+        // gviz 會自動跳過前兩列說明列，直接給欄位
+        const result = rows.map(row => {
+          const obj = {};
+          cols.forEach((c, i) => {
+            obj[c] = row.c[i] ? (row.c[i].v !== null && row.c[i].v !== undefined ? String(row.c[i].v) : '') : '';
+          });
+          return obj;
+        }).filter(r => Object.values(r).some(v => v));
+        console.log('JSONP loaded gid='+gid+':', result.length, '筆');
+        if(result[0]) console.log('欄位:', Object.keys(result[0]).slice(0,6));
+        resolve(result);
+      } catch(e) {
+        console.error('JSONP parse error:', e);
+        resolve([]);
+      }
+    };
+    const s = document.createElement('script');
+    s.id = 'script-'+gid;
+    s.src = url;
+    s.onerror = () => { delete window[cbName]; resolve([]); };
+    document.head.appendChild(s);
+    setTimeout(() => { if(window[cbName]) { delete window[cbName]; resolve([]); } }, 10000);
+  });
+}
+
+async function fetchCSV(url) {
+  // 從 URL 提取 gid
+  const gidMatch = url.match(/gid=([0-9]+)/);
+  const gid = gidMatch ? gidMatch[1] : '0';
+  return fetchSheetJSON(SHEET_ID, gid);
+}
+
+// ═══════════════ LOAD ═══════════════
+async function loadAll() {
+  document.getElementById('last-updated').textContent = '更新中...';
+
+  // 先用內嵌資料立即顯示
+  if (EMBEDDED.products && EMBEDDED.products.length > 0) {
+    DATA.products = EMBEDDED.products.map(p => ({
+      ...p,
+      rate: p.price > 0 ? p.cost/p.price : 0
+    }));
+    DATA.inventory = EMBEDDED.inventory || [];
+    DATA.sales = EMBEDDED.sales || [];
+    initFilters();
+    setDateRange('week', null);
+    renderDashboard();
+    renderProducts();
+    renderCost();
+    renderInventory();
+    renderSales();
+    document.getElementById('last-updated').textContent = '內嵌資料已載入，嘗試線上更新...';
+    document.getElementById('dash-sub').textContent = `商品 ${DATA.products.length} 件（內嵌）`;
+    document.getElementById('prod-sub').textContent = `共 ${DATA.products.length} 件商品（內嵌資料）`;
+  }
+  const [products, sales, inventory] = await Promise.all([
+    fetchCSV(CSV.products),
+    fetchCSV(CSV.sales),
+    fetchCSV(CSV.inventory),
+  ]);
+
+  // 解析商品主檔
+  // 商品主檔：第3列是標題（index=2），欄位名稱對應
+  DATA.products = products.filter(r => r['料號(SKU)'] || r['料號']).map(r => {
+    const sku   = r['料號(SKU)'] || r['料號'] || '';
+    const cat   = r['品類'] || '';
+    const brand = r['品牌'] || '';
+    const sup   = r['供應商'] || '';
+    const name  = r['品名'] || '';
+    const spec  = r['規格/型號'] || r['規格'] || '';
+    const cost  = num(r['成本(TWD含稅)'] || r['成本'] || 0);
+    const mrp   = num(r['市價'] || 0);
+    const price = num(r['最低售價'] || 0);
+    const stock = num(r['期初庫存'] || r['庫存'] || 0);
+    const status= r['商品狀態'] || r['狀態'] || '上架';
+    const rate  = price > 0 ? cost/price : 0;
+    return { sku, cat, brand, sup, name, spec, cost, mrp, price, stock, status, rate };
+  }).filter(p => p.sku && p.sku.length > 3);  // 過濾掉沒料號的列
+
+  // 解析通路報表
+  DATA.sales = sales.filter(r => r['日期'] && r['日期'].match(/\d{4}/)).map(r => ({
+    date:    (r['日期'] || '').slice(0,10),
+    channel: r['通路'] || '',
+    sku:     r['料號'] || '',
+    name:    r['品名'] || '',
+    spec:    r['規格'] || '',
+    qty:     num(r['數量'] || 0),
+    price:   num(r['單價'] || 0),
+    amount:  num(r['銷售金額'] || 0),
+    disc:    num(r['平台折扣'] || 1) || 1,
+    received:num(r['實收金額'] || 0),
+    ret_qty: num(r['退貨數'] || 0),
+    ret_amt: num(r['退貨金額'] || 0),
+    cost_unit: num(r['商品成本 (自動)'] || r['商品成本'] || 0),
+    cost_total: num(r['成本小計'] || 0),
+    profit:  num(r['真實利潤'] || 0),
+    profit_rate: num(r['真實利潤率'] || 0),
+  }));
+
+  // 解析庫存管理
+  DATA.inventory = inventory.filter(r => r['料號'] || r['品名']).map(r => {
+    const expDate = r['效期日期'] || '';
+    let expDays = '';
+    if (expDate && expDate !== '—' && expDate.trim()) {
+      const d = new Date(expDate);
+      if (!isNaN(d)) expDays = Math.round((d - new Date()) / 86400000);
+    }
+    const stock = num(r['期末庫存'] || r['期初庫存'] || 0);
+    const safety = num(r['安全庫存'] || r['安全 庫存'] || 0);
+    let stockStatus = '🟢 正常';
+    if (stock <= 0) stockStatus = '⚠ 缺貨';
+    else if (safety && stock <= safety) stockStatus = '🔴 警示';
+    else if (safety && stock <= safety*2) stockStatus = '🟡 偏低';
+
+    let expStatus = '—';
+    if (expDays !== '') {
+      if (expDays < 0) expStatus = '🚫 已過期';
+      else if (expDays <= 30) expStatus = '🔴 緊急即期';
+      else if (expDays <= 90) expStatus = '🟡 即將到期';
+      else expStatus = '🟢 效期正常';
+    }
+    return {
+      sku: r['料號'] || '', name: r['品名'] || '', cat: r['品類'] || '',
+      safety, stock,
+      days: num(r['庫存天數'] || r['庫存\n天數'] || ''),
+      expiry: expDate, expDays, stockStatus, expStatus,
+    };
+  });
+
+  // 更新時間
+  const now = new Date();
+  document.getElementById('last-updated').textContent =
+    `更新：${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  // 線上資料只在成功取得時才覆蓋內嵌資料
+  const onlineProducts = products.filter(p=>p['料號(SKU)']||p['料號']).map(p=>({
+    sku: p['料號(SKU)']||p['料號']||'', cat: p['品類']||'', brand: p['品牌']||'',
+    sup: p['供應商']||'', name: p['品名']||'', spec: p['規格/型號']||p['規格']||'',
+    cost: parseFloat(p['成本(TWD含稅)']||p['成本']||0)||0,
+    mrp: parseFloat(p['市價']||0)||0, price: parseFloat(p['最低售價']||0)||0,
+    stock: parseInt(p['期初庫存']||p['庫存']||0)||0,
+    status: p['商品狀態']||p['狀態']||'上架',
+    rate: 0
+  })).filter(p=>p.sku&&p.sku.length>3).map(p=>({...p,rate:p.price>0?p.cost/p.price:0}));
+  if (onlineProducts.length > 0) { DATA.products = onlineProducts; console.log('線上商品更新:', onlineProducts.length); }
+  else { console.log('線上無資料，保留內嵌資料', DATA.products.length, '件'); }
+  if (sales && sales.length > 0) DATA.sales = sales;
+  if (inventory && inventory.length > 0) DATA.inventory = inventory;
+
+  // 初始化下拉選單
+  initFilters();
+
+  // 設定預設日期（本週）
+  setDateRange('week', null);
+
+  // 渲染
+  renderDashboard();
+  renderProducts();
+  renderCost();
+  renderInventory();
+  renderSales();
+
+  document.getElementById('dash-sub').textContent =
+    `商品 ${DATA.products.length} 件　銷售記錄 ${DATA.sales.length} 筆　上次更新 ${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('prod-sub').textContent = `共 ${DATA.products.length} 件商品`;
+}
+
+function initFilters() {
+  const cats = [...new Set(DATA.products.map(p => p.cat).filter(Boolean))];
+  const brands = [...new Set(DATA.products.map(p => p.brand).filter(Boolean))];
+  ['prod-cat','cost-cat','inv-cat'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">全部品類</option>' +
+      cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    sel.value = cur;
+  });
+  const brandSel = document.getElementById('prod-brand');
+  if (brandSel) {
+    brandSel.innerHTML = '<option value="">全部品牌</option>' +
+      brands.map(b => `<option value="${b}">${b}</option>`).join('');
+  }
+}
+
+// ═══════════════ DASHBOARD ═══════════════
+function renderDashboard() {
+  const totalSales = DATA.sales.reduce((s,r) => s+r.amount, 0);
+  const totalProfit = DATA.sales.reduce((s,r) => s+r.profit, 0);
+  const warnCount = DATA.inventory.filter(r =>
+    r.stockStatus.includes('警示') || r.stockStatus.includes('缺貨') ||
+    r.expStatus.includes('即期') || r.expStatus.includes('過期')
+  ).length;
+
+  document.getElementById('dash-kpis').innerHTML = `
+    <div class="kpi k-blue">
+      <div class="kpi-label">總銷售額</div>
+      <div class="kpi-val">$${fmt(totalSales)}<small> 元</small></div>
+      <div class="kpi-trend">${DATA.sales.length} 筆訂單</div>
+    </div>
+    <div class="kpi k-green">
+      <div class="kpi-label">真實總利潤</div>
+      <div class="kpi-val ${totalProfit<0?'trend-dn':'trend-up'}">$${fmt(totalProfit)}<small> 元</small></div>
+      <div class="kpi-trend">利潤率 ${totalSales>0?((totalProfit/totalSales)*100).toFixed(1):'—'}%</div>
+    </div>
+    <div class="kpi k-amber">
+      <div class="kpi-label">商品數</div>
+      <div class="kpi-val">${DATA.products.length}<small> 件</small></div>
+      <div class="kpi-trend">${[...new Set(DATA.products.map(p=>p.cat))].length} 個品類</div>
+    </div>
+    <div class="kpi k-red">
+      <div class="kpi-label">警示項目</div>
+      <div class="kpi-val">${warnCount}<small> 項</small></div>
+      <div class="kpi-trend ${warnCount>0?'trend-dn':''}">庫存 + 效期警示</div>
+    </div>
+  `;
+
+  if (charts['channel']) charts['channel'].destroy();
+  if (charts['category']) charts['category'].destroy();
+  if (charts['turnover']) charts['turnover'].destroy();
+
+  // 通路業績圖
+  const chMap = {};
+  DATA.sales.forEach(r => { chMap[r.channel] = (chMap[r.channel]||0)+r.received; });
+  const chLabels = Object.keys(chMap).filter(Boolean);
+  const chData = chLabels.map(k => chMap[k]);
+  charts['channel'] = new Chart(document.getElementById('chart-channel'), {
+    type:'bar',
+    data:{ labels:chLabels, datasets:[{
+      label:'實收金額', data:chData,
+      backgroundColor:['rgba(74,159,212,.7)','rgba(107,197,227,.7)','rgba(34,211,165,.7)','rgba(245,200,66,.7)','rgba(240,96,112,.7)','rgba(124,92,252,.7)'],
+      borderRadius:6, borderWidth:0,
+    }]},
+    options:{ responsive:true, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#a8b8d8',font:{size:11}}},
+               y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#a8b8d8',font:{size:11},callback:v=>'$'+v.toLocaleString()}} }}
+  });
+
+  // 品類佔比圖
+  const catMap = {};
+  DATA.products.forEach(p => { catMap[p.cat] = (catMap[p.cat]||0)+1; });
+  const catLabels = Object.keys(catMap).filter(Boolean);
+  charts['category'] = new Chart(document.getElementById('chart-category'), {
+    type:'doughnut',
+    data:{ labels:catLabels, datasets:[{
+      data:catLabels.map(k=>catMap[k]),
+      backgroundColor:['rgba(74,159,212,.8)','rgba(34,211,165,.8)','rgba(245,200,66,.8)','rgba(240,96,112,.8)','rgba(124,92,252,.8)','rgba(107,197,227,.8)','rgba(245,113,50,.8)'],
+      borderWidth:0, hoverOffset:8,
+    }]},
+    options:{ responsive:true, plugins:{legend:{position:'right',labels:{color:'#a8b8d8',font:{size:11},boxWidth:12,padding:10}}} }
+  });
+
+  // 迴轉率排行
+  const turnMap = {};
+  DATA.sales.forEach(r => { turnMap[r.sku] = (turnMap[r.sku]||0)+r.received; });
+  const prodWithTurn = DATA.products
+    .filter(p => p.stock > 0 && p.cost > 0 && turnMap[p.sku])
+    .map(p => ({ name:p.name.slice(0,15), rate: turnMap[p.sku]/(p.cost*p.stock) }))
+    .sort((a,b) => b.rate-a.rate).slice(0,10);
+  charts['turnover'] = new Chart(document.getElementById('chart-turnover'), {
+    type:'bar',
+    data:{ labels:prodWithTurn.map(p=>p.name), datasets:[{
+      label:'迴轉率', data:prodWithTurn.map(p=>p.rate.toFixed(2)),
+      backgroundColor:'rgba(34,211,165,.7)', borderRadius:4, borderWidth:0,
+    }]},
+    options:{ indexAxis:'y', responsive:true, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#a8b8d8',font:{size:11}}},
+               y:{grid:{display:false},ticks:{color:'#a8b8d8',font:{size:11}}} }}
+  });
+}
+
+// ═══════════════ PRODUCTS ═══════════════
+function renderProducts() {
+  const q = document.getElementById('prod-search').value.toLowerCase();
+  const cat = document.getElementById('prod-cat').value;
+  const brand = document.getElementById('prod-brand').value;
+  const status = document.getElementById('prod-status').value;
+  let rows = DATA.products.filter(p =>
+    (!q || p.sku.toLowerCase().includes(q) || p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q)) &&
+    (!cat || p.cat === cat) && (!brand || p.brand === brand) && (!status || p.status === status)
+  );
+  if (SORT.products.key) rows = sortRows(rows, SORT.products);
+  FILTERED.products = rows;
+  const total = rows.length;
+  const start = (PAGE.products-1)*PER;
+  const page = rows.slice(start, start+PER);
+  document.getElementById('prod-count').textContent = `共 ${total} 件`;
+  document.getElementById('prod-tbody').innerHTML = page.length ? page.map(p => {
+    const rateColor = p.rate < 0.55 ? 'text-blue' : '';
+    const stockColor = p.stock <= 5 ? 'text-red' : p.stock <= 15 ? 'text-amber' : 'text-green';
+    return `<tr>
+      <td><span class="mono" style="color:var(--blue2)">${p.sku}</span></td>
+      <td><span class="chip chip-gray">${p.cat}</span></td>
+      <td style="color:var(--text)">${p.brand}</td>
+      <td style="color:var(--text);max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${p.name}">${p.name}</td>
+      <td style="color:var(--text2)">${p.spec||'—'}</td>
+      <td class="mono" style="text-align:right;color:var(--orange)">$${fmt(p.cost)}</td>
+      <td class="mono" style="text-align:right;color:var(--text2)">$${fmt(p.mrp)}</td>
+      <td class="mono" style="text-align:right;color:var(--green)">$${fmt(p.price)}</td>
+      <td style="text-align:center"><span class="mono ${rateColor}">${p.rate?fmtPct(p.rate):'—'}</span></td>
+      <td style="text-align:center"><span class="mono ${stockColor}">${p.stock||'—'}</span></td>
+      <td style="text-align:center"><span class="chip ${p.status==='上架'?'chip-green':p.status==='下架'?'chip-red':'chip-amber'}">${p.status}</span></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="11"><div class="empty"><div class="empty-icon">🔍</div><p>沒有符合條件的商品</p></div></td></tr>`;
+  renderPager('prod', total, PAGE.products);
+}
+
+// ═══════════════ COST ═══════════════
+function renderCost() {
+  const q = document.getElementById('cost-search').value.toLowerCase();
+  const cat = document.getElementById('cost-cat').value;
+  const profit = document.getElementById('cost-profit').value;
+  const shopee_fee = FEE['蝦皮'] || 0.05;
+  const momo_fee = FEE['MOMO'] || 0.06;
+  let rows = DATA.products
+    .filter(p => p.cost > 0 && p.price > 0)
+    .filter(p => (!q || p.sku.toLowerCase().includes(q) || p.name.toLowerCase().includes(q)))
+    .filter(p => !cat || p.cat === cat)
+    .map(p => {
+      const shopee_margin = p.price - p.cost - p.price*shopee_fee;
+      const shopee_rate = p.price > 0 ? shopee_margin/p.price : 0;
+      const momo_margin = p.price - p.cost - p.price*momo_fee;
+      const momo_rate = p.price > 0 ? momo_margin/p.price : 0;
+      return { ...p, shopee_margin, shopee_rate, momo_margin, momo_rate };
+    })
+    .filter(p => !profit ||
+      (profit==='high' && p.rate<0.45) ||
+      (profit==='mid' && p.rate>=0.45 && p.rate<=0.55) ||
+      (profit==='low' && p.rate>0.55)
+    );
+  if (SORT.cost.key) rows = sortRows(rows, SORT.cost);
+  document.getElementById('cost-count').textContent = `共 ${rows.length} 件`;
+  document.getElementById('cost-tbody').innerHTML = rows.length ? rows.map(p => {
+    const rc = p.rate<0.45?'text-blue':p.rate>0.55?'text-red':'';
+    const mc = v => v >= 0 ? 'text-green' : 'text-red';
+    return `<tr>
+      <td><span class="mono" style="color:var(--blue2)">${p.sku}</span></td>
+      <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${p.name}">${p.name}</td>
+      <td><span class="chip chip-gray">${p.cat}</span></td>
+      <td class="mono" style="text-align:right;color:var(--orange)">$${fmt(p.cost)}</td>
+      <td class="mono" style="text-align:right;color:var(--text2)">$${fmt(p.mrp)}</td>
+      <td class="mono" style="text-align:right;color:var(--green)">$${fmt(p.price)}</td>
+      <td style="text-align:center"><span class="mono ${rc}">${fmtPct(p.rate)}</span></td>
+      <td class="mono" style="text-align:right"><span class="${mc(p.shopee_margin)}">$${fmt(Math.round(p.shopee_margin))}</span></td>
+      <td style="text-align:center"><span class="mono ${mc(p.shopee_rate)}">${fmtPct(p.shopee_rate)}</span></td>
+      <td class="mono" style="text-align:right"><span class="${mc(p.momo_margin)}">$${fmt(Math.round(p.momo_margin))}</span></td>
+      <td style="text-align:center"><span class="mono ${mc(p.momo_rate)}">${fmtPct(p.momo_rate)}</span></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="11"><div class="empty"><div class="empty-icon">💰</div><p>沒有符合條件的商品</p></div></td></tr>`;
+}
+
+// ═══════════════ INVENTORY ═══════════════
+function switchInvTab(tab, el) {
+  INV_TAB = tab;
+  document.querySelectorAll('.tab-row .tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderInventory();
+}
+
+function renderInventory() {
+  const q = document.getElementById('inv-search').value.toLowerCase();
+  const cat = document.getElementById('inv-cat').value;
+  const status = document.getElementById('inv-status').value;
+  let rows = DATA.inventory.filter(r =>
+    (!q || r.sku.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)) &&
+    (!cat || r.cat === cat) &&
+    (!status || r.stockStatus.includes(status))
+  );
+  if (INV_TAB === 'warn') rows = rows.filter(r => r.stockStatus.includes('警示') || r.stockStatus.includes('缺貨') || r.stockStatus.includes('偏低'));
+  if (INV_TAB === 'expiry') rows = rows.filter(r => r.expStatus.includes('即期') || r.expStatus.includes('過期'));
+
+  if (SORT.inventory.key) rows = sortRows(rows, SORT.inventory);
+
+  const warnCount = DATA.inventory.filter(r => r.stockStatus.includes('警示') || r.stockStatus.includes('缺貨') || r.expStatus.includes('即期') || r.expStatus.includes('過期')).length;
+  const badge = document.getElementById('inv-alert-badge');
+  badge.style.display = warnCount > 0 ? 'inline' : 'none';
+  badge.textContent = `${warnCount} 項警示`;
+  document.getElementById('inv-count').textContent = `共 ${rows.length} 筆`;
+  document.getElementById('inv-sub').textContent = `${DATA.inventory.length} 件商品　${warnCount} 項需注意`;
+
+  document.getElementById('inv-tbody').innerHTML = rows.length ? rows.map(r => {
+    const sc = r.stock <= 0 ? 'text-red' : r.stock <= r.safety ? 'text-red' : r.stock <= r.safety*2 ? 'text-amber' : 'text-green';
+    const ec = r.expStatus.includes('過期') ? 'text-red' : r.expStatus.includes('緊急') ? 'text-red' : r.expStatus.includes('即將') ? 'text-amber' : '';
+    return `<tr>
+      <td><span class="mono" style="color:var(--blue2)">${r.sku||'—'}</span></td>
+      <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</td>
+      <td><span class="chip chip-gray">${r.cat||'—'}</span></td>
+      <td class="mono" style="text-align:center">${r.safety||'—'}</td>
+      <td class="mono ${sc}" style="text-align:center;font-weight:700">${r.stock}</td>
+      <td style="text-align:center">${r.stockStatus}</td>
+      <td class="mono" style="text-align:center;color:var(--text2)">${r.days?r.days+'天':'—'}</td>
+      <td class="mono" style="color:var(--text2)">${fmtDate(r.expiry)}</td>
+      <td class="mono ${ec}" style="text-align:center;font-weight:${r.expDays!==''&&r.expDays<=90?700:400}">${r.expDays!==''?r.expDays+'天':'—'}</td>
+      <td style="text-align:center">${r.expStatus}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="10"><div class="empty"><div class="empty-icon">📦</div><p>沒有符合條件的庫存資料</p></div></td></tr>`;
+}
+
+// ═══════════════ SALES ═══════════════
+function setDateRange(range, btn) {
+  document.querySelectorAll('.date-quick-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const fmt = d => d.toISOString().slice(0,10);
+  let start, end;
+  if (range==='today') { start=end=fmt(today); }
+  else if (range==='yesterday') { const y=new Date(today); y.setDate(y.getDate()-1); start=end=fmt(y); }
+  else if (range==='week') { const d=new Date(today); d.setDate(d.getDate()-d.getDay()+1); start=fmt(d); end=fmt(today); }
+  else if (range==='lastweek') { const d=new Date(today); d.setDate(d.getDate()-d.getDay()-6); const e=new Date(d); e.setDate(e.getDate()+6); start=fmt(d); end=fmt(e); }
+  else if (range==='month') { const d=new Date(today.getFullYear(),today.getMonth(),1); start=fmt(d); end=fmt(today); }
+  else if (range==='lastmonth') { const d=new Date(today.getFullYear(),today.getMonth()-1,1); const e=new Date(today.getFullYear(),today.getMonth(),0); start=fmt(d); end=fmt(e); }
+  else { start='2024-01-01'; end=fmt(today); }
+  document.getElementById('date-start').value = start;
+  document.getElementById('date-end').value = end;
+}
+
+function applyFilter() { renderSales(); }
+
+function renderSales() {
+  const start = document.getElementById('date-start').value;
+  const end   = document.getElementById('date-end').value;
+  const ch    = document.getElementById('sales-channel').value;
+  const q     = document.getElementById('sales-search').value.toLowerCase();
+  const sort  = document.getElementById('sales-sort').value;
+
+  let rows = DATA.sales.filter(r =>
+    (!start || r.date >= start) && (!end || r.date <= end) &&
+    (!ch || r.channel === ch) &&
+    (!q || r.name.toLowerCase().includes(q) || r.sku.toLowerCase().includes(q))
+  );
+
+  // 排序
+  if (sort==='amount_desc') rows.sort((a,b)=>b.amount-a.amount);
+  else if (sort==='amount_asc') rows.sort((a,b)=>a.amount-b.amount);
+  else if (sort==='profit_desc') rows.sort((a,b)=>b.profit-a.profit);
+  else if (sort==='rate_desc') rows.sort((a,b)=>b.profit_rate-a.profit_rate);
+  else rows.sort((a,b)=>a.date.localeCompare(b.date));
+
+  FILTERED.sales = rows;
+
+  // KPI 摘要
+  const totalAmt = rows.reduce((s,r)=>s+r.amount,0);
+  const totalRec = rows.reduce((s,r)=>s+r.received,0);
+  const totalProfit = rows.reduce((s,r)=>s+r.profit,0);
+  const totalOrders = rows.length;
+  const avgUnit = totalOrders>0 ? totalAmt/totalOrders : 0;
+  const summaryCards = document.querySelectorAll('#sales-summary .summary-card');
+  const summaryData = [
+    ['銷售金額', `$${fmt(Math.round(totalAmt))} 元`],
+    ['實收金額', `$${fmt(Math.round(totalRec))} 元`],
+    ['真實利潤', `$${fmt(Math.round(totalProfit))} 元`],
+    ['訂單筆數', `${totalOrders} 筆`],
+    ['平均客單價', `$${fmt(Math.round(avgUnit))} 元`],
+  ];
+  summaryCards.forEach((c,i) => {
+    c.querySelector('.summary-label').textContent = summaryData[i][0];
+    const v = c.querySelector('.summary-val');
+    v.textContent = summaryData[i][1];
+    v.style.color = i===2 ? (totalProfit>=0?'var(--green)':'var(--red)') : '';
+  });
+
+  // 每日趨勢圖
+  const dayMap = {};
+  rows.forEach(r => { if (r.date) dayMap[r.date.slice(0,10)] = (dayMap[r.date.slice(0,10)]||{amt:0,profit:0}), dayMap[r.date.slice(0,10)].amt+=r.amount, dayMap[r.date.slice(0,10)].profit+=r.profit; });
+  const days = Object.keys(dayMap).sort();
+  if (charts['daily']) charts['daily'].destroy();
+  if (days.length) {
+    charts['daily'] = new Chart(document.getElementById('chart-daily'), {
+      type:'line',
+      data:{ labels:days, datasets:[
+        { label:'銷售金額', data:days.map(d=>dayMap[d].amt), borderColor:'rgba(74,159,212,1)', backgroundColor:'rgba(74,159,212,.1)', fill:true, tension:.3, pointRadius:3 },
+        { label:'真實利潤', data:days.map(d=>dayMap[d].profit), borderColor:'rgba(34,211,165,1)', backgroundColor:'rgba(34,211,165,.08)', fill:true, tension:.3, pointRadius:3 },
+      ]},
+      options:{ responsive:true, plugins:{legend:{labels:{color:'#a8b8d8',font:{size:11}}}},
+        scales:{ x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#a8b8d8',font:{size:10}}},
+                 y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#a8b8d8',font:{size:11},callback:v=>'$'+v.toLocaleString()}} }}
+    });
+  }
+
+  // 通路比較
+  const chMap2 = {};
+  rows.forEach(r => { chMap2[r.channel]=(chMap2[r.channel]||0)+r.received; });
+  const chL = Object.keys(chMap2).filter(Boolean);
+  if (charts['channel2']) charts['channel2'].destroy();
+  if (chL.length) {
+    charts['channel2'] = new Chart(document.getElementById('chart-channel2'), {
+      type:'bar',
+      data:{ labels:chL, datasets:[{ label:'實收', data:chL.map(k=>chMap2[k]),
+        backgroundColor:'rgba(74,159,212,.7)', borderRadius:6, borderWidth:0 }]},
+      options:{ responsive:true, plugins:{legend:{display:false}},
+        scales:{ x:{grid:{display:false},ticks:{color:'#a8b8d8',font:{size:11}}},
+                 y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#a8b8d8',font:{size:11},callback:v=>'$'+v.toLocaleString()}} }}
+    });
+  }
+
+  // 利潤率排行
+  const profMap = {};
+  const profCnt = {};
+  rows.forEach(r => {
+    if (!r.sku) return;
+    profMap[r.sku] = (profMap[r.sku]||0)+r.profit;
+    profCnt[r.sku] = (profCnt[r.sku]||0)+r.received;
+  });
+  const profRank = Object.entries(profMap)
+    .map(([sku,p]) => ({ sku, name:(DATA.products.find(x=>x.sku===sku)||{name:sku}).name.slice(0,14), rate:profCnt[sku]>0?p/profCnt[sku]:0 }))
+    .filter(r=>r.rate>0).sort((a,b)=>b.rate-a.rate).slice(0,8);
+  if (charts['profit-rank']) charts['profit-rank'].destroy();
+  if (profRank.length) {
+    charts['profit-rank'] = new Chart(document.getElementById('chart-profit-rank'), {
+      type:'bar',
+      data:{ labels:profRank.map(r=>r.name), datasets:[{ label:'利潤率', data:profRank.map(r=>(r.rate*100).toFixed(1)),
+        backgroundColor:'rgba(34,211,165,.7)', borderRadius:6, borderWidth:0 }]},
+      options:{ indexAxis:'y', responsive:true, plugins:{legend:{display:false}},
+        scales:{ x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#a8b8d8',font:{size:11},callback:v=>v+'%'}},
+                 y:{grid:{display:false},ticks:{color:'#a8b8d8',font:{size:10}}} }}
+    });
+  }
+
+  // 明細表（分頁）
+  const total = rows.length;
+  const start2 = (PAGE.sales-1)*PER;
+  const pageRows = rows.slice(start2, start2+PER);
+  document.getElementById('sales-count').textContent = `共 ${total} 筆`;
+  document.getElementById('sales-tbody').innerHTML = pageRows.length ? pageRows.map(r => {
+    const pc = r.profit_rate >= 0.2 ? 'text-green' : r.profit_rate >= 0.1 ? 'text-amber' : r.profit_rate < 0 ? 'text-red' : '';
+    const ch_chip = r.channel==='蝦皮'?'chip-shopee':r.channel==='MOMO'?'chip-momo':r.channel==='官網'?'chip-web':'chip-gray';
+    return `<tr>
+      <td class="mono" style="color:var(--text2)">${fmtDate(r.date)}</td>
+      <td><span class="chip ${ch_chip}">${r.channel||'—'}</span></td>
+      <td><span class="mono" style="color:var(--blue2);font-size:11px">${r.sku||'—'}</span></td>
+      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.name}">${r.name||'—'}</td>
+      <td class="mono" style="text-align:center">${r.qty||'—'}</td>
+      <td class="mono" style="text-align:right;color:var(--text2)">$${fmt(r.price)}</td>
+      <td class="mono" style="text-align:right">$${fmt(r.amount)}</td>
+      <td class="mono" style="text-align:right;color:var(--green)">$${fmt(r.received)}</td>
+      <td class="mono" style="text-align:right;color:var(--orange)">$${r.cost_unit?fmt(r.cost_total):'—'}</td>
+      <td class="mono" style="text-align:right"><span class="${pc}">$${fmt(Math.round(r.profit))}</span></td>
+      <td style="text-align:center"><span class="mono ${pc}">${r.profit_rate?fmtPct(r.profit_rate):'—'}</span></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="11"><div class="empty"><div class="empty-icon">📋</div><p>沒有符合條件的銷售記錄</p></div></td></tr>`;
+  renderPager('sales', total, PAGE.sales);
+  document.getElementById('sales-sub').textContent =
+    `篩選後：${total} 筆　銷售 $${fmt(Math.round(totalAmt))}　利潤 $${fmt(Math.round(totalProfit))}`;
+}
+
+// ═══════════════ PAGER ═══════════════
+function renderPager(key, total, cur) {
+  const pages = Math.ceil(total/PER);
+  const el = document.getElementById(`${key}-pager`);
+  if (!el) return;
+  if (pages <= 1) { el.innerHTML=''; return; }
+  let html = '';
+  for (let i=1; i<=Math.min(pages,7); i++) {
+    html += `<button class="pager-btn${i===cur?' active':''}" onclick="goPage('${key}',${i})">${i}</button>`;
+  }
+  if (pages>7) html += `<span style="color:var(--text3);padding:3px 6px">...${pages}</span>`;
+  el.innerHTML = html;
+}
+
+function goPage(key, p) {
+  PAGE[key] = p;
+  if (key==='products') renderProducts();
+  else if (key==='sales') renderSales();
+}
+
+// ═══════════════ SORT ═══════════════
+function sortTable(table, key) {
+  const s = SORT[table];
+  if (s.key === key) s.dir *= -1; else { s.key=key; s.dir=1; }
+  if (table==='products') { PAGE.products=1; renderProducts(); }
+  else if (table==='cost') renderCost();
+  else if (table==='inventory') renderInventory();
+  document.querySelectorAll(`#page-${table==='cost'?'cost':'products'} th`).forEach(th => {
+    th.classList.remove('sort-asc','sort-desc');
+  });
+}
+
+function sortRows(rows, s) {
+  return [...rows].sort((a,b) => {
+    const av = a[s.key], bv = b[s.key];
+    if (typeof av==='number') return (av-bv)*s.dir;
+    return String(av||'').localeCompare(String(bv||''))*s.dir;
+  });
+}
+
+// ═══════════════ EXPORT ═══════════════
+function exportExcel(data, filename) {
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, filename);
+}
+
+function exportProducts() {
+  exportExcel(FILTERED.products.map(p => ({
+    料號:p.sku, 品類:p.cat, 品牌:p.brand, 供應商:p.sup, 品名:p.name,
+    規格:p.spec, 成本:p.cost, 市價:p.mrp, 最低售價:p.price, 成本率:fmtPct(p.rate), 庫存:p.stock, 狀態:p.status,
+  })), '姜Jiang_商品主檔.xlsx');
+}
+function exportCost() {
+  const shopee = FEE['蝦皮']||0.05, momo=FEE['MOMO']||0.06;
+  exportExcel(DATA.products.filter(p=>p.cost>0&&p.price>0).map(p => ({
+    料號:p.sku, 品名:p.name, 品類:p.cat, 成本:p.cost, 市價:p.mrp, 最低售價:p.price,
+    成本率:fmtPct(p.rate),
+    蝦皮預估利潤:Math.round(p.price-p.cost-p.price*shopee),
+    MOMO預估利潤:Math.round(p.price-p.cost-p.price*momo),
+  })), '姜Jiang_成本中心.xlsx');
+}
+function exportInventory() {
+  exportExcel(DATA.inventory.map(r => ({
+    料號:r.sku, 品名:r.name, 品類:r.cat, 安全庫存:r.safety, 期末庫存:r.stock,
+    庫存狀態:r.stockStatus, 庫存天數:r.days, 效期日期:r.expiry, 剩餘天數:r.expDays, 效期狀態:r.expStatus,
+  })), '姜Jiang_庫存管理.xlsx');
+}
+function exportSales() {
+  exportExcel(FILTERED.sales.map(r => ({
+    日期:r.date, 通路:r.channel, 料號:r.sku, 品名:r.name, 規格:r.spec,
+    數量:r.qty, 單價:r.price, 銷售金額:r.amount, 實收金額:r.received,
+    商品成本:r.cost_unit, 成本小計:r.cost_total, 真實利潤:Math.round(r.profit),
+    真實利潤率:fmtPct(r.profit_rate),
+  })), '姜Jiang_銷售報表.xlsx');
+}
+
+// ═══════════════ NAV ═══════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+// ═══════════════ INIT ═══════════════
+loadAll();
+</script>
+</body>
+</html>
